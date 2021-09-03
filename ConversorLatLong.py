@@ -11,7 +11,7 @@ from os.path import isfile, join
 import time
 import csv
 ''' Pametros inciais '''
-mypath = 'C:/Users/Luiz/Documents/POSGRADUACAO_ASTRONOMIA/Mapa_Marte/AllImages/'
+mypath = '<path_your_dir>/AllImages/'
 timestart = time.time()
 ''' Tamanho original da imagem '''
 tamanhoImg = 7680

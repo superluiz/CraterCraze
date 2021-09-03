@@ -10,7 +10,7 @@ from PIL import Image
 from os import listdir
 from os.path import isfile, join
 import time
-
+''' Pametros inciais '''
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 cda = CDA()
 mypath = 'C:/Users/Luiz/Documents/POSGRADUACAO_ASTRONOMIA/Mapa_Marte/AllImages/'
@@ -18,14 +18,40 @@ timestart = time.time()
 tamanhoImg = 7680
 mpp = 463.1
 
+''' Metodo de controle de tempo demandado, apenas acompanhamento ''' 
+def checkPoint(texto):    
+    tempo = time.time() - timestart
+    print('\t' + str(tempo)[0:5] + ' - '+texto)
+
+''' Metodo que le todos os arquivos (imagens originais) do diretorio
+    /AllImages e cria um relatorio chamado informacoes.csv contendo
+    dados de metros por pixel usados nas escalas'''
 def ler_arquivos():
     infoExtras = open("informacoes.csv", "w")
     infoExtras.write("\nEscala;LaguraAltura;MetrosPorPixel\n")
     infoExtras.close()
     return [f for f in listdir(mypath) if isfile(join(mypath, f))]
 
+''' Metodo que grava quando uma escala nova entrou na lista de conversao'''
+def info_extra(escala):
+    infoExtras = open("informacoes.csv", "a")    
+    infoExtras.write(str(escala) 
+    + ';' + str(round(escala*tamanhoImg/100)) 
+    + ';' + str(round((100/escala)*mpp)) + '\n')
+    infoExtras.close()
+    
+''' Metodo principal onde ira ler as imagens (no tamanho
+    correspondete a escala informada) e contara as crateras 
+    gerando um csv salvo no diretorio correspondente '''    
 def contar_cratera(img,escala):
-    if(False == pular_se_ja_existe(img)):    
+    if(escala <100):        
+        if(escala<10):
+            img2 = img[0:-4] + '_E0' + str(escala) + '.csv'
+        else:
+            img2 = img[0:-4] + '_E' + str(escala) + '.csv'
+    else:
+        img2 = img
+    if(False == pular_se_ja_existe(img2)):    
         try:
             resized = ''
             local_mpp = mpp
@@ -39,10 +65,12 @@ def contar_cratera(img,escala):
             pred_img_orig.set_scale(local_mpp)        
             pred_img_orig.to_csv(mypath +'csv/'+ nomeSemExtensao+'.csv', likelihoods=False)
             pred_img_orig.show(threshold=0.5, include_ticks=True, save_plot=mypath+'plot/'+img)
-        except:
+        except Exception as e:
             checkPoint('erro na imagem: ' + img)
-            #pass
-    
+            checkPoint('\t' + str(e))
+            
+''' Metodo para redimensionar a imagem confome a escala em % e
+    salvar em outro diretório '''    
 def redimensionar_imagem(img, escala):    
     imagem = Image.open(mypath+img)    
     nomeSemExtensao = img[0:-4]
@@ -55,17 +83,9 @@ def redimensionar_imagem(img, escala):
     imgAlvo.save(mypath+'rsz/' + nomeImgRedimensionada, optimize=True, quality=85)    
     return nomeImgRedimensionada   
  
-def checkPoint(texto):    
-    tempo = time.time() - timestart
-    print('\t' + str(tempo)[0:5] + ' - '+texto)
 
-def info_extra(escala):
-    infoExtras = open("informacoes.csv", "a")    
-    infoExtras.write(str(escala) 
-    + ';' + str(round(escala*tamanhoImg/100)) 
-    + ';' + str(round((100/escala)*mpp)) + '\n')
-    infoExtras.close()
-
+''' Metodo verifica se a imagem ja foi calculada, caso execute este 
+    prorgama partir da segunda vez. Otimiza tempo. '''
 def pular_se_ja_existe(img):
     jaTem = False
     imgSemExtensao = img[0:-4]
@@ -78,17 +98,16 @@ def pular_se_ja_existe(img):
             break
     return jaTem
         
-
+''' -------------- INICIO ----------------'''
 checkPoint('inicio')
-# escalas = [5,20,50,80,100]
-escalas = [100]
+''' 3% é o menor tamanho possivel de conversao '''
+escalas = [3, 5,20,50,80,100]
 onlyfiles = ler_arquivos()
 for pct in escalas:
     info_extra(pct)
     for img in onlyfiles:
         checkPoint(img + ' ' + str(pct)+ '%')
-        contar_cratera(img, pct)
-        
+        contar_cratera(img, pct)        
 checkPoint('Termino')
 # 	273.0 - erro na imagem: mola_color_N-30_300.png
 # 	9678. - erro na imagem: mola_color_N00_240.png

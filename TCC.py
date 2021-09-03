@@ -13,7 +13,7 @@ import time
 ''' Pametros inciais '''
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 cda = CDA()
-mypath = 'C:/Users/Luiz/Documents/POSGRADUACAO_ASTRONOMIA/Mapa_Marte/AllImages/'
+mypath = '<path_your_dir>/AllImages/'
 timestart = time.time()
 tamanhoImg = 7680
 mpp = 463.1

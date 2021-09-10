@@ -5,8 +5,6 @@ Created on Sat Sep  4 21:22:20 2021
 @author: Luiz
 """
 import csv
-import math as Math
-from geopy import distance
 from math import radians, cos, sin, asin, sqrt
 
 import time
@@ -82,7 +80,7 @@ class CalculaDistancia:
 def novo_arquivo_csv():
     csv_dest = open(mypath+'csv_proc/'+fileName, 'w', encoding='UTF8', newline='')
     writer = csv.writer(csv_dest, delimiter=';')
-    writer.writerow(['latitude','longitude','diametro'])
+    writer.writerow(['latitude','longitude','diametro','unica'])
     csv_dest.close()        
 
 def insere_processado(linha, flag):
@@ -90,14 +88,6 @@ def insere_processado(linha, flag):
     writer.writerow([linha[0], linha[1], linha[2], flag])
     
 
-def insere_processado2(cd):
-    csv_dest = open(mypath+'csv_proc/'+fileName, 'a', encoding='UTF8', newline='')
-    writer = csv.writer(csv_dest, delimiter=';')
-    if(cd.idB > 0):
-        writer.writerow([cd.idA, cd.pontoA_lat, cd.pontoA_lng, cd.crateraA, cd.idB ])
-    else:
-        writer.writerow([cd.idA, cd.pontoA_lat, cd.pontoA_lng, cd.crateraA])
-    csv_dest.close()
 def ler_e_ordena():
     with open (mypath+"csv_proc/csvAnalisado.csv", "r") as f:
         dados = csv.reader(f, delimiter=";")
@@ -154,11 +144,10 @@ def grava_resultado():
     csv_dest.close()    
         
 checkPoint(True,'Inicio')
-fileName = 'crateraSimilar14.csv'
+fileName = 'crateraSimilar15.csv'
 novo_arquivo_csv()
 lista_ordenada = ler_e_ordena()
 csv_dest = open(mypath+'csv_proc/'+fileName, 'a', encoding='UTF8', newline='')
-grava_similares()  
-#grava_resultado()  
+grava_similares()   
 csv_dest.close()        
 checkPoint(True,'Termino')

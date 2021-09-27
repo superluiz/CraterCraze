@@ -2,7 +2,7 @@
 """
 Created on Mon Aug 28 2021
 
-@author: Luiz
+@author: Luiz Ahumada
 """
 from pycda import CDA, load_image
 from PIL import ImageFile
@@ -13,10 +13,10 @@ import time
 ''' Pametros inciais '''
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 cda = CDA()
-mypath = '<path_your_dir>/AllImages/'
+mypath = 'C:/Users/Luiz/Documents/POSGRADUACAO_ASTRONOMIA/Mapa_Marte/AllImages/'
 timestart = time.time()
-tamanhoImg = 7680
-mpp = 463.1
+tamanhoImg = 7680 #pixels
+mpp = 463.1 # Metros por pixel
 
 ''' Metodo de controle de tempo demandado, apenas acompanhamento ''' 
 def checkPoint(texto):    
@@ -82,7 +82,6 @@ def redimensionar_imagem(img, escala):
         nomeImgRedimensionada = nomeSemExtensao +'_E' + str(escala) + '.png'
     imgAlvo.save(mypath+'rsz/' + nomeImgRedimensionada, optimize=True, quality=85)    
     return nomeImgRedimensionada   
- 
 
 ''' Metodo verifica se a imagem ja foi calculada, caso execute este 
     prorgama partir da segunda vez. Otimiza tempo. '''

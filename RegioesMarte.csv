@@ -1,0 +1,31 @@
+Identif;NomeRegião;LatInicial;LatFinal;LongInicial;LongFinal
+MC-01;Mare Boreum;65;90;0;360
+MC-02;Diacria;30;65;300;360
+MC-03;Arcadia;30;65;240;300
+MC-04;Mare Acidalium;30;35;180;240
+MC-05;Ismenius Lacus;30;65;0;60
+MC-06;Casius;30;65;60;120
+MC-07;Cebrenia;30;65;120;180
+MC-08;Amazonis;0;30;315;360
+MC-09;Tharsis;0;30;270;315
+MC-10;Lunae Palus;0;30;225;270
+MC-11;Oxia Palus;0;30;180;225
+MC-12;Arabia;0;30;0;45
+MC-13;Syrtis Major;0;30;45;90
+MC-14;Amenthes;0;30;90;135
+MC-15;Elysium;0;30;135;180
+MC-16;Memnonia;-30;0;315;360
+MC-17;Phoenicis Lacus;-30;0;270;315
+MC-18;Coprates;-30;0;225;270
+MC-19;Margaritifer Sinus;-30;0;180;225
+MC-20;Sinus Sabaeus;-30;0;0;45
+MC-21;Iapygia;-30;0;45;90
+MC-22;Mare Tyrrhenum;-30;0;90;135
+MC-23;Aeolis;-30;0;135;180
+MC-24;Phaethontis;-65;-30;300;360
+MC-25;Thaumasia;-65;-30;240;300
+MC-26;Argyre;-65;-30;180;240
+MC-27;Noachis;-65;-30;0;60
+MC-28;Hellas;-65;-30;60;120
+MC-29;Eridania;-65;-30;120;180
+MC-30;Mare Australe;-90;-65;0;360

@@ -2,21 +2,20 @@
 """
 Created on Mon Aug 30 22:18:36 2021
 
-@author: Luiz
+@author: Luiz Ahumada
 """
-from PIL import ImageFile
-from PIL import Image
 from os import listdir
 from os.path import isfile, join
 import time
 import csv
+
 ''' Pametros inciais '''
-mypath = '<path_your_dir>/AllImages/'
+mypath = 'C:/Users/Luiz/Documents/POSGRADUACAO_ASTRONOMIA/Mapa_Marte/AllImages/'
 timestart = time.time()
 ''' Tamanho original da imagem '''
-tamanhoImg = 7680
+tamanhoImg = 7680 #pixels
 ''' Escala original da imagem, em pixels '''
-mpp = 463.1
+mpp = 463.1 #metros por pixel
 
 '''
     Objeto que recebe e calcula as coordenadas e diametro da cratera
@@ -81,7 +80,7 @@ def insere_processado(linha):
 
 ''' Metodo que atraves do nome do arquivo e o caminho onde está o csv
     analisado, ele cria o objeto RegiaoMarte e calcula tudo '''
-def abre_analise_arquivo(nomearquivo):
+def abre_analise_arquivo(nomearquivo):    
     checkPoint(nomearquivo)
     rm = RegiaoMarte(nomearquivo)
     with open(mypath+'csv/'+nomearquivo, newline='') as csvfile:
@@ -92,6 +91,7 @@ def abre_analise_arquivo(nomearquivo):
          linha.append(rm.getLonCalc(row['long']) )
          linha.append(rm.getDiamCratera(row['diameter']) )
          insere_processado(linha)
+         checkPoint('\t'+str(linha))
 
 ''' ------------ INICIO ------------ '''
 checkPoint('inicio')

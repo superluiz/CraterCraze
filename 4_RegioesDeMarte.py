@@ -1,66 +1,96 @@
 # -*- coding: utf-8 -*-
 """
 Created on Thu Sep  9 23:29:03 2021
-
+Refatorado para eficiência, legibilidade e robustez.
 @author: Luiz Ahumada
 """
 import csv
+from pathlib import Path
 import time
+
+# Parâmetros iniciais
+BASE_DIR = Path("C:/Users/Luiz/Documents/POSGRADUACAO_ASTRONOMIA/Mapa_Marte")
+INPUT_FILE = BASE_DIR / "AllImages/csv_proc/crateraSimilar.csv"
+REGIOES_FILE = BASE_DIR / "RegioesMarte.csv"
+OUTPUT_FILE = BASE_DIR / "resultadoCrateraMOLA.csv"
 timestart = time.time()
-mypath = 'C:/Users/Luiz/Documents/POSGRADUACAO_ASTRONOMIA/Mapa_Marte/'
-lista_ordenada = []
-fileName = 'resultadoCrateraMOLA.csv'
 
-def ler_RegioesMarte():
-    with open (mypath+"RegioesMarte.csv", "r") as f:
-        dados = csv.reader(f, delimiter=";")
-        lista = list(dados)
-        lista.pop(0)
-        return lista
+# Funções auxiliares
+def check_point(message):
+    """Exibe o tempo decorrido com uma mensagem."""
+    elapsed = time.time() - timestart
+    print(f"[{elapsed:.2f}s] {message}")
 
-def ler_crateraSimilar_ordena():
-    with open (mypath+"AllImages/csv_proc/crateraSimilar.csv", "r") as f:
-        dados = csv.reader(f, delimiter=";")
-        lista = list(dados)
-        lista.pop(0)
-        return sorted (lista, key = lambda dado: (dado[3]), reverse = False)
+def criar_csv_vazio():
+    """Cria o arquivo CSV de saída vazio com o cabeçalho."""
+    with OUTPUT_FILE.open("w", encoding="utf-8", newline="") as file:
+        writer = csv.writer(file, delimiter=";")
+        writer.writerow(["ID", "Regiao", "latitude", "longitude", "diametro"])
+    check_point("Arquivo de saída criado.")
 
-''' Metodo incicial, quando executar este programa, cria um arquivo sem dados '''    
-def novo_arquivo_csv():
-    csv_dest = open(mypath+fileName, 'w', encoding='UTF8', newline='')
-    writer = csv.writer(csv_dest, delimiter=';')
-    writer.writerow(['ID','Regiao','latitude','longitude','diametro'])
-    csv_dest.close()        
+def ler_csv(filepath, expected_columns=None):
+    """
+    Lê um arquivo CSV e retorna os dados como uma lista de listas.
+    Valida se contém as colunas esperadas, se especificado.
+    """
+    try:
+        with filepath.open("r", encoding="utf-8") as file:
+            reader = csv.reader(file, delimiter=";")
+            header = next(reader)
+            if expected_columns and not all(col in header for col in expected_columns):
+                raise ValueError(f"Colunas esperadas: {expected_columns}, mas encontradas: {header}")
+            return [row for row in reader]
+    except FileNotFoundError:
+        raise FileNotFoundError(f"O arquivo {filepath} não foi encontrado.")
+    except Exception as e:
+        raise Exception(f"Erro ao ler {filepath}: {e}")
 
-''' grava informacao da cratera com a Regiao no arquivo '''
-def insere_processado(cratera, regiao):
-    csv_dest = open(mypath+fileName, 'a', encoding='UTF8', newline='')
-    writer = csv.writer(csv_dest, delimiter=';')
-    writer.writerow([regiao[0], regiao[1],cratera[0], cratera[1], cratera[2]])
-    csv_dest.close()
+def gravar_no_csv(cratera, regiao):
+    """Grava a cratera e sua região correspondente no arquivo de saída."""
+    with OUTPUT_FILE.open("a", encoding="utf-8", newline="") as file:
+        writer = csv.writer(file, delimiter=";")
+        writer.writerow([regiao[0], regiao[1], cratera[0], cratera[1], cratera[2]])
+
+def associar_crateras_a_regioes(crateras, regioes):
+    """
+    Associa cada cratera à sua região correspondente.
+    Se não encontrar uma região, registra como "Região não encontrada".
+    """
+    check_point("Iniciando associação de crateras às regiões.")
+    for cratera in crateras:
+        latitude = float(cratera[0])
+        longitude = float(cratera[1])
+        regiao_encontrada = None
+
+        # Verifica se a cratera está dentro dos limites de alguma região
+        for regiao in regioes:
+            lat_min, lat_max = float(regiao[2]), float(regiao[3])
+            lon_min, lon_max = float(regiao[4]), float(regiao[5])
+            if lat_min <= latitude <= lat_max and lon_min <= longitude <= lon_max:
+                regiao_encontrada = regiao
+                break
+
+        if regiao_encontrada:
+            gravar_no_csv(cratera, regiao_encontrada)
+        else:
+            gravar_no_csv(cratera, ["---", "Região não encontrada"])
+    check_point("Associação concluída.")
+
+# Execução principal
+def main():
+    check_point("Início do processamento.")
     
-''' Metodo para comparar a latitude e longitude com as regioes de Marte '''
-def categoriza_crateras_regiao():
-    listaRegioes = ler_RegioesMarte()
-    listaCrateras = ler_crateraSimilar_ordena()
-    achouRegiao = False
-    for cratera in listaCrateras:
-        achouRegiao = False
-        for regiao in listaRegioes:                
-            if(float(regiao[2]) < float(cratera[0]) and float(regiao[3]) >= float(cratera[0]) and
-                float(regiao[4]) < float(cratera[1]) and float(regiao[5]) >= float(cratera[1])):
-                insere_processado(cratera, regiao)                    
-                achouRegiao = True
-        if(achouRegiao == False):
-            insere_processado(cratera, ['---','Regiao nao encontrada'])
+    # Cria o arquivo de saída vazio
+    criar_csv_vazio()
 
-''' Metodo de controle de tempo demandado, apenas acompanhamento ''' 
-def checkPoint(mostrar,texto):
-    if(mostrar):
-        tempo = time.time() - timestart
-        print('\t' + str(tempo)[0:5] + ' - '+str(texto))
-            
-checkPoint(True,'Inicio')         
-novo_arquivo_csv()
-categoriza_crateras_regiao()
-checkPoint(True,'Final')
+    # Lê os arquivos de entrada
+    regioes = ler_csv(REGIOES_FILE, expected_columns=["ID", "Regiao", "LatMin", "LatMax", "LonMin", "LonMax"])
+    crateras = ler_csv(INPUT_FILE, expected_columns=["latitude", "longitude", "diametro"])
+
+    # Processa as crateras e associa às regiões
+    associar_crateras_a_regioes(crateras, regioes)
+
+    check_point("Processamento concluído.")
+
+if __name__ == "__main__":
+    main()

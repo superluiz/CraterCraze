@@ -1,113 +1,101 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Aug 28 2021
-
+Refatorado para maior robustez, eficiência e clareza.
 @author: Luiz Ahumada
 """
+from pathlib import Path
 from pycda import CDA, load_image
-from PIL import ImageFile
 from PIL import Image
-from os import listdir
-from os.path import isfile, join
+import csv
 import time
-''' Pametros inciais '''
-ImageFile.LOAD_TRUNCATED_IMAGES = True
-cda = CDA()
-mypath = 'C:/Users/Luiz/Documents/POSGRADUACAO_ASTRONOMIA/Mapa_Marte/AllImages/'
+
+# Parâmetros iniciais
+BASE_DIR = Path("C:/Users/Luiz/Documents/POSGRADUACAO_ASTRONOMIA/Mapa_Marte/AllImages")
+RESIZED_DIR = BASE_DIR / "rsz"
+CSV_DIR = BASE_DIR / "csv"
+PLOT_DIR = BASE_DIR / "plot"
+INFO_CSV = BASE_DIR / "informacoes.csv"
+TAMANHO_IMG = 7680  # Tamanho original da imagem em pixels
+MPP = 463.1  # Metros por pixel
+ESCALAS = [3, 5, 20, 50, 80, 100]  # Escalas a serem processadas
 timestart = time.time()
-tamanhoImg = 7680 #pixels
-mpp = 463.1 # Metros por pixel
 
-''' Metodo de controle de tempo demandado, apenas acompanhamento ''' 
-def checkPoint(texto):    
-    tempo = time.time() - timestart
-    print('\t' + str(tempo)[0:5] + ' - '+texto)
+# Configuração da biblioteca CDA
+cda = CDA()
 
-''' Metodo que le todos os arquivos (imagens originais) do diretorio
-    /AllImages e cria um relatorio chamado informacoes.csv contendo
-    dados de metros por pixel usados nas escalas'''
+# Criação de diretórios
+for directory in [RESIZED_DIR, CSV_DIR, PLOT_DIR]:
+    directory.mkdir(parents=True, exist_ok=True)
+
+# Funções auxiliares
+def check_point(message):
+    """Exibe o tempo decorrido com uma mensagem."""
+    elapsed = time.time() - timestart
+    print(f"[{elapsed:.2f}s] {message}")
+
 def ler_arquivos():
-    infoExtras = open("informacoes.csv", "w")
-    infoExtras.write("\nEscala;LaguraAltura;MetrosPorPixel\n")
-    infoExtras.close()
-    return [f for f in listdir(mypath) if isfile(join(mypath, f))]
+    """Lê todos os arquivos de imagem do diretório base."""
+    return list(BASE_DIR.glob("*.png"))
 
-''' Metodo que grava quando uma escala nova entrou na lista de conversao'''
-def info_extra(escala):
-    infoExtras = open("informacoes.csv", "a")    
-    infoExtras.write(str(escala) 
-    + ';' + str(round(escala*tamanhoImg/100)) 
-    + ';' + str(round((100/escala)*mpp)) + '\n')
-    infoExtras.close()
-    
-''' Metodo principal onde ira ler as imagens (no tamanho
-    correspondete a escala informada) e contara as crateras 
-    gerando um csv salvo no diretorio correspondente '''    
-def contar_cratera(img,escala):
-    if(escala <100):        
-        if(escala<10):
-            img2 = img[0:-4] + '_E0' + str(escala) + '.csv'
-        else:
-            img2 = img[0:-4] + '_E' + str(escala) + '.csv'
-    else:
-        img2 = img
-    if(False == pular_se_ja_existe(img2)):    
-        try:
-            resized = ''
-            local_mpp = mpp
-            if(escala != 100):
-                img = redimensionar_imagem(img, escala)
-                local_mpp = (100/escala) * mpp      
-                resized = 'rsz/'
-            nomeSemExtensao = img[0:-4]
-            imagem = load_image(mypath + resized + img)        
-            pred_img_orig = cda.get_prediction(imagem)    
-            pred_img_orig.set_scale(local_mpp)        
-            pred_img_orig.to_csv(mypath +'csv/'+ nomeSemExtensao+'.csv', likelihoods=False)
-            pred_img_orig.show(threshold=0.5, include_ticks=True, save_plot=mypath+'plot/'+img)
-        except Exception as e:
-            checkPoint('erro na imagem: ' + img)
-            checkPoint('\t' + str(e))
-            
-''' Metodo para redimensionar a imagem confome a escala em % e
-    salvar em outro diretório '''    
-def redimensionar_imagem(img, escala):    
-    imagem = Image.open(mypath+img)    
-    nomeSemExtensao = img[0:-4]
-    tamEmEscala = escala*tamanhoImg/100
-    imgAlvo = imagem.resize((round(tamEmEscala),round(tamEmEscala)))
-    if(escala<10):
-        nomeImgRedimensionada = nomeSemExtensao +'_E0' + str(escala) + '.png'
-    else:
-        nomeImgRedimensionada = nomeSemExtensao +'_E' + str(escala) + '.png'
-    imgAlvo.save(mypath+'rsz/' + nomeImgRedimensionada, optimize=True, quality=85)    
-    return nomeImgRedimensionada   
+def registrar_info(escala):
+    """Grava informações de escala no arquivo 'informacoes.csv'."""
+    with INFO_CSV.open("a", encoding="utf-8", newline="") as file:
+        writer = csv.writer(file, delimiter=";")
+        writer.writerow([escala, f"{escala * TAMANHO_IMG // 100}", round((100 / escala) * MPP)])
 
-''' Metodo verifica se a imagem ja foi calculada, caso execute este 
-    prorgama partir da segunda vez. Otimiza tempo. '''
-def pular_se_ja_existe(img):
-    jaTem = False
-    imgSemExtensao = img[0:-4]
-    csvsCalculados = [f for f in listdir(mypath+'csv/') if isfile(join(mypath+'csv/', f))]
-    for csvCalc in csvsCalculados:
-        csvSemExtensao = csvCalc[0:-4]        
-        if(csvSemExtensao == imgSemExtensao):
-            jaTem = True
-            checkPoint(' imagem ja calculada. ')
-            break
-    return jaTem
-        
-''' -------------- INICIO ----------------'''
-checkPoint('inicio')
-''' 3% é o menor tamanho possivel de conversao '''
-escalas = [3, 5,20,50,80,100]
-onlyfiles = ler_arquivos()
-for pct in escalas:
-    info_extra(pct)
-    for img in onlyfiles:
-        checkPoint(img + ' ' + str(pct)+ '%')
-        contar_cratera(img, pct)        
-checkPoint('Termino')
-# 	273.0 - erro na imagem: mola_color_N-30_300.png
-# 	9678. - erro na imagem: mola_color_N00_240.png
-#	2510. - erro na imagem: mola_color_N-60_180.png
+def redimensionar_imagem(img_path, escala):
+    """Redimensiona uma imagem para uma escala percentual e salva no diretório 'rsz'."""
+    imagem = Image.open(img_path)
+    tam_em_escala = round(TAMANHO_IMG * escala / 100)
+    nome_redimensionado = RESIZED_DIR / f"{img_path.stem}_E{escala:02d}.png"
+    imagem.resize((tam_em_escala, tam_em_escala)).save(nome_redimensionado, optimize=True, quality=85)
+    return nome_redimensionado
+
+def pular_se_ja_existe(nome_base):
+    """Verifica se o arquivo CSV correspondente já existe no diretório 'csv'."""
+    return (CSV_DIR / f"{nome_base}.csv").exists()
+
+def processar_imagem(img_path, escala):
+    """Redimensiona, processa e gera relatórios para uma imagem."""
+    nome_base = img_path.stem
+    if escala < 100:
+        nome_base += f"_E{escala:02d}"
+    if pular_se_ja_existe(nome_base):
+        check_point(f"Pulando {nome_base}.csv (já processado).")
+        return
+
+    try:
+        resized_img = img_path
+        escala_mpp = MPP
+        if escala != 100:
+            resized_img = redimensionar_imagem(img_path, escala)
+            escala_mpp = (100 / escala) * MPP
+
+        imagem = load_image(resized_img)
+        predicao = cda.get_prediction(imagem)
+        predicao.set_scale(escala_mpp)
+        predicao.to_csv(CSV_DIR / f"{nome_base}.csv", likelihoods=False)
+        predicao.show(threshold=0.5, include_ticks=True, save_plot=PLOT_DIR / f"{nome_base}.png")
+        check_point(f"Processada: {nome_base}")
+    except Exception as e:
+        check_point(f"Erro ao processar {img_path.name} na escala {escala}%: {e}")
+
+# Execução principal
+def main():
+    # Criação do arquivo de informações
+    with INFO_CSV.open("w", encoding="utf-8", newline="") as file:
+        writer = csv.writer(file, delimiter=";")
+        writer.writerow(["Escala (%)", "LarguraAltura (px)", "MetrosPorPixel"])
+
+    check_point("Início do processamento.")
+    imagens = ler_arquivos()
+    for escala in ESCALAS:
+        registrar_info(escala)
+        for img_path in imagens:
+            check_point(f"Processando {img_path.name} na escala {escala}%.")
+            processar_imagem(img_path, escala)
+    check_point("Processamento concluído.")
+
+if __name__ == "__main__":
+    main()

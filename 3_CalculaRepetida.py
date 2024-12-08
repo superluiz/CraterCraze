@@ -1,126 +1,110 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sat Sep  4 21:22:20 2021
-
+Created on Sat Sep 4 21:22:20 2021
+Refatorado para maior eficiência, robustez e clareza.
 @author: Luiz Ahumada
 """
 import csv
 from math import radians, cos, sin, asin, sqrt
+from pathlib import Path
 import time
-mars_radius = 3389500 # raio de Marte em metros
-margem_erro = 5 #%
+
+# Parâmetros iniciais
+BASE_DIR = Path("C:/Users/Luiz/Documents/POSGRADUACAO_ASTRONOMIA/Mapa_Marte/AllImages/csv_proc")
+RESULT_FILE = BASE_DIR / "crateraSimilares.csv"
+ANALYZED_FILE = BASE_DIR / "csvAnalisado.csv"
+RAIO_MARTE = 3389500  # Raio de Marte em metros
+MARGEM_ERRO = 5  # Percentual de margem de erro no diâmetro
 timestart = time.time()
-metrosporgrau = 59288.88888
-mypath = 'C:/Users/Luiz/Documents/POSGRADUACAO_ASTRONOMIA/Mapa_Marte/AllImages/'
-lista_ordenada = []
-final_lista = []
-contaCrat = 0
-class CalculaDistancia:
-    def __init__(self, pontoA, pontoB):
-        self.pontoA_lat = float(pontoA[0])
-        self.pontoB_lat = float(pontoB[0])        
-        self.pontoA_lng = float(pontoA[1])
-        self.pontoB_lng = float(pontoB[1])
-        self.crateraA = float(pontoA[2])
-        self.crateraB = float(pontoB[2])
-        self.resultado = 0
-        self.mostrarLog = False
-        self.minCratera = 0
-        self.maxCratera = 0
-        self.idPontoA = 0
-        self.idPontoB = 0
-    def setIds(self, idA, idB):
-        self.idPontoA = idA
-        self.idPontoB = idB
-    def analisaDistancia(self):
-        self.retorno = self.haversine(self.pontoA_lng, self.pontoA_lat,self.pontoB_lng, self.pontoB_lat )
-        if(float(self.retorno) < float(self.crateraA / 2)):                
-            return True
-        return False
-    def analisaCrateras(self):
-        self.margemCratera = float("%0.5f" % (margem_erro * self.crateraA / 100))
-        self.minCratera = float("%0.5f" % (self.crateraA - self.margemCratera))
-        self.maxCratera = float("%0.5f" % (self.crateraA + self.margemCratera))
-        if(self.minCratera < self.crateraB) and (self.crateraB < self.maxCratera):
-            return self.analisaGraus()
-        return False
-    def analisaGraus(self):
-        self.dtLat = abs(self.pontoA_lat - self.pontoB_lat)
-        self.dtLng = abs(self.pontoA_lng - self.pontoB_lng)
-        if(self.dtLat < 5 and self.dtLng < 5):
-            return True
-        return False
-    def haversine(self,lon1, lat1, lon2, lat2):
-        self.resultado = 0
-        lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])    
-        dlon = lon2 - lon1 
-        dlat = lat2 - lat1 
-        a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
-        c = 2 * asin(sqrt(a)) 
-        r = mars_radius
-        self.resultado = float("%0.5f" % (c * r))
-        return self.resultado 
-    def printDados(self, index):
-        self.mensagem = 'Index: '+str(index)+ ' de 783860\n'
-        self.mensagem = self.mensagem + '\tCratera: '+str(self.crateraA) +' ' +str(self.crateraB) + '\n'
-        self.mensagem = self.mensagem + '\tDistancia: '+str(self.resultado) + '\n'
-        self.mensagem = self.mensagem + '\tLat: '+str(self.pontoA_lat) +' ' +str(self.pontoB_lat) + '\n'
-        self.mensagem = self.mensagem + '\tLng: '+str(self.pontoA_lng) +' ' +str(self.pontoB_lng) + '\n'
-        checkPoint(True, self.mensagem)
-        
-        
-''' Metodo incicial, quando executar este programa, cria um arquivo sem dados '''    
-def novo_arquivo_csv():
-    csv_dest = open(mypath+'csv_proc/'+fileName, 'w', encoding='UTF8', newline='')
-    writer = csv.writer(csv_dest, delimiter=';')
-    writer.writerow(['latitude','longitude','diametro','unica'])
-    csv_dest.close()        
 
-def insere_processado(linha, flag, contaCrat):    
-    if(flag == True):        
-        writer = csv.writer(csv_dest, delimiter=';')
+# Funções auxiliares
+def check_point(message):
+    """Exibe o tempo decorrido com uma mensagem."""
+    elapsed = time.time() - timestart
+    print(f"[{elapsed:.2f}s] {message}")
+
+def haversine(lon1, lat1, lon2, lat2):
+    """
+    Calcula a distância esférica entre dois pontos (em metros) usando a fórmula de Haversine.
+    """
+    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+    a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
+    c = 2 * asin(sqrt(a))
+    return c * RAIO_MARTE
+
+def criar_csv_vazio():
+    """Cria o arquivo CSV de saída vazio com o cabeçalho."""
+    with RESULT_FILE.open("w", encoding="utf-8", newline="") as file:
+        writer = csv.writer(file, delimiter=";")
+        writer.writerow(["latitude", "longitude", "diametro", "unica"])
+    check_point("Arquivo de saída criado.")
+
+def ler_e_ordenar_csv():
+    """Lê o arquivo CSV de crateras analisadas e ordena os dados pelo diâmetro."""
+    with ANALYZED_FILE.open("r", encoding="utf-8") as file:
+        reader = csv.reader(file, delimiter=";")
+        next(reader)  # Ignora o cabeçalho
+        return sorted(reader, key=lambda row: float(row[2]))
+
+def calcular_margem(raio):
+    """Calcula a margem mínima e máxima para o raio de uma cratera."""
+    margem = MARGEM_ERRO * raio / 100
+    return raio - margem, raio + margem
+
+# Classe para identificar crateras similares
+class ComparadorCrateras:
+    def __init__(self, cratera_a, cratera_b):
+        self.lat_a = float(cratera_a[0])
+        self.lon_a = float(cratera_a[1])
+        self.diam_a = float(cratera_a[2])
+        self.lat_b = float(cratera_b[0])
+        self.lon_b = float(cratera_b[1])
+        self.diam_b = float(cratera_b[2])
+        self.distancia = haversine(self.lon_a, self.lat_a, self.lon_b, self.lat_b)
+
+    def sao_similares(self):
+        """
+        Verifica se duas crateras são similares com base na distância e nos diâmetros.
+        """
+        min_diam, max_diam = calcular_margem(self.diam_a)
+        if min_diam <= self.diam_b <= max_diam and self.distancia <= self.diam_a / 2:
+            return True
+        return False
+
+def gravar_resultado(cratera, unica=True):
+    """
+    Grava a cratera no arquivo de saída, indicando se é única ou similar.
+    """
+    with RESULT_FILE.open("a", encoding="utf-8", newline="") as file:
+        writer = csv.writer(file, delimiter=";")
+        linha = cratera + [1 if unica else 0]
         writer.writerow(linha)
-    else:
-        checkPoint(True,'Out - '+str(linha))
 
-def ler_e_ordena():
-    with open (mypath+"csv_proc/csvAnalisado.csv", "r") as f:
-        dados = csv.reader(f, delimiter=";")
-        lista = list(dados)
-        lista.pop(0)
-        return sorted (lista, key = lambda dado: float(dado[2]), reverse = False)
-
-''' Metodo de controle de tempo demandado, apenas acompanhamento ''' 
-def checkPoint(mostrar,texto):
-    if(mostrar):
-        tempo = time.time() - timestart
-        print('\t' + str(tempo)[0:5] + ' - '+str(texto))
-
-''' Metodo que analisa cada cratera com a próxima na lista e verifica
-se e a mesma cratera detectada (em outra imagem, por exemplo) '''
-def grava_similares(): 
-    flag = True
-    checkPoint(True,'START: '+str(len(final_lista)) + ' de 783860')
-    for x in range(0, len(lista_ordenada)):
-        index = x+1
-        flag = True
-        if(index > len(lista_ordenada)):
-            break
-        for y in range(index, len(lista_ordenada)):
-            cd = CalculaDistancia(lista_ordenada[x], lista_ordenada[y])
-            if(cd.analisaCrateras()):
-                if(cd.analisaDistancia()):
-                    flag = False
-                    x = y
-            else:                
+def identificar_similares(lista_crateras):
+    """
+    Compara cada cratera com as próximas na lista para verificar similaridades.
+    """
+    total = len(lista_crateras)
+    for i, cratera_a in enumerate(lista_crateras):
+        unica = True
+        for j in range(i + 1, total):
+            cratera_b = lista_crateras[j]
+            comparador = ComparadorCrateras(cratera_a, cratera_b)
+            if comparador.sao_similares():
+                unica = False
                 break
-        insere_processado(lista_ordenada[x], flag, contaCrat)
+        gravar_resultado(cratera_a, unica)
+        check_point(f"Processada {i + 1}/{total}")
 
-checkPoint(True,'Inicio')
-fileName = 'crateraSimilares.csv'
-novo_arquivo_csv()
-lista_ordenada = ler_e_ordena()
-csv_dest = open(mypath+'csv_proc/'+fileName, 'a', encoding='UTF8', newline='')
-grava_similares()   
-csv_dest.close()        
-checkPoint(True,str(contaCrat)+' Termino '+fileName)
+# Execução principal
+def main():
+    check_point("Início do processamento.")
+    criar_csv_vazio()
+    lista_crateras = ler_e_ordenar_csv()
+    identificar_similares(lista_crateras)
+    check_point("Processamento concluído.")
+
+if __name__ == "__main__":
+    main()

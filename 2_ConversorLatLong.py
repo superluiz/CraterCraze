@@ -1,102 +1,94 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Aug 30 22:18:36 2021
-
+Refatorado para maior clareza, eficiência e robustez.
 @author: Luiz Ahumada
 """
-from os import listdir
-from os.path import isfile, join
-import time
+from pathlib import Path
 import csv
+import time
 
-''' Pametros inciais '''
-mypath = 'C:/Users/Luiz/Documents/POSGRADUACAO_ASTRONOMIA/Mapa_Marte/AllImages/'
+# Parâmetros iniciais
+BASE_DIR = Path("C:/Users/Luiz/Documents/POSGRADUACAO_ASTRONOMIA/Mapa_Marte/AllImages")
+CSV_PROC_DIR = BASE_DIR / "csv_proc"
+ANALISE_CSV = CSV_PROC_DIR / "csvAnalisado.csv"
+ORIGINAL_CSV_DIR = BASE_DIR / "csv"
+TAMANHO_IMG = 7680  # pixels
+MPP = 463.1  # metros por pixel
 timestart = time.time()
-''' Tamanho original da imagem '''
-tamanhoImg = 7680 #pixels
-''' Escala original da imagem, em pixels '''
-mpp = 463.1 #metros por pixel
 
-'''
-    Objeto que recebe e calcula as coordenadas e diametro da cratera
-    conforme o nome do arquivo e a escala.
-'''
+# Criação de diretórios
+CSV_PROC_DIR.mkdir(parents=True, exist_ok=True)
+
+# Classe para calcular coordenadas e diâmetro das crateras
 class RegiaoMarte:
-    def __init__(self, nomearquivo):
-        self.nomearquivo = nomearquivo[12:-4]
-        self.nomeArray = self.nomearquivo.split('_')
-        self.mpp = 0
-        self.escala = 100
-        self.latitude = 0
-        self.longitude = 0
-        self.getLat()
-        self.getLon()
-        self.getEscala()
-        self.getMpp()
-    def getLat(self):
-        self.latitude = int(self.nomeArray[0])
-    def getLon(self):
-        self.longitude = int(self.nomeArray[1])
-    def getEscala(self):
-        if(len(self.nomeArray)>=3):
-            self.escala = int(self.nomeArray[2].replace("E", ""))
-    def getMpp(self):
-        self.mpp = (100/self.escala) * mpp
-    def getCalcCoord(self, inputCoord):
-        self.tamPixel = round(tamanhoImg * self.escala / 100)
-        return float("%0.5f" % (int(inputCoord) * 30 / self.tamPixel))
-    def getLatCalc(self, inputCoord):
-        return self.latitude + self.getCalcCoord(inputCoord)
-    def getLonCalc(self, inputCoord):
-        return self.longitude + self.getCalcCoord(inputCoord)    
-    def getDiamCratera(self, diamPixel):
-        return float("%0.5f" % (float(diamPixel) * self.mpp))
+    def __init__(self, nome_arquivo):
+        self.nome_arquivo = nome_arquivo
+        self.nome_array = nome_arquivo[12:-4].split("_")
+        self.latitude = int(self.nome_array[0])
+        self.longitude = int(self.nome_array[1])
+        self.escala = int(self.nome_array[2].replace("E", "")) if len(self.nome_array) >= 3 else 100
+        self.mpp = (100 / self.escala) * MPP
+        self.tam_pixel = round(TAMANHO_IMG * self.escala / 100)
 
-''' Metodo incicial, quando executar este programa, cria um arquivo sem dados '''    
-def novo_arquivo_csv():
-    csv_dest = open(mypath+'csv_proc/csvAnalisado.csv', 'w', encoding='UTF8', newline='')
-    writer = csv.writer(csv_dest, delimiter=';')
-    writer.writerow(['latitude','longitude','diametro'])
-    csv_dest.close()
-    
-''' Metodo que le todos os arquvios csv e retorna um array '''
-def ler_arquivos():
-    return [f for f in listdir(mypath+'csv/') if isfile(join(mypath+'csv/', f))]
+    def calcular_coordenada(self, input_coord):
+        return round(int(input_coord) * 30 / self.tam_pixel, 5)
 
-''' Metodo de controle de tempo demandado, apenas acompanhamento ''' 
-def checkPoint(texto):    
-    tempo = time.time() - timestart
-    print('\t' + str(tempo)[0:5] + ' - '+texto)
+    def calcular_latitude(self, input_coord):
+        return self.latitude + self.calcular_coordenada(input_coord)
 
-''' Metodo que recebe um array contendo latitude, longitude e diametro
-    Em metros e insere no arquivo csvAnalisado.csv.
-    A cada chamada ele abre o arquivo e fecha, assim se der algum erro
-    o trabalho nao estara totalmente perdido '''
-def insere_processado(linha):
-    csv_dest = open(mypath+'csv_proc/csvAnalisado.csv', 'a', encoding='UTF8', newline='')
-    writer = csv.writer(csv_dest, delimiter=';')
-    writer.writerow(linha)
-    csv_dest.close()
+    def calcular_longitude(self, input_coord):
+        return self.longitude + self.calcular_coordenada(input_coord)
 
-''' Metodo que atraves do nome do arquivo e o caminho onde está o csv
-    analisado, ele cria o objeto RegiaoMarte e calcula tudo '''
-def abre_analise_arquivo(nomearquivo):    
-    checkPoint(nomearquivo)
-    rm = RegiaoMarte(nomearquivo)
-    with open(mypath+'csv/'+nomearquivo, newline='') as csvfile:
-     reader = csv.DictReader(csvfile, delimiter=',')
-     for row in reader:
-         linha = []
-         linha.append(rm.getLatCalc(row['lat']) )
-         linha.append(rm.getLonCalc(row['long']) )
-         linha.append(rm.getDiamCratera(row['diameter']) )
-         insere_processado(linha)
-         checkPoint('\t'+str(linha))
+    def calcular_diametro(self, diam_pixel):
+        return round(float(diam_pixel) * self.mpp, 5)
 
-''' ------------ INICIO ------------ '''
-checkPoint('inicio')
-novo_arquivo_csv()
-onlyfiles = ler_arquivos()
-for csvs in onlyfiles:      
-    abre_analise_arquivo(csvs)    
-checkPoint('Termino')    
+# Funções auxiliares
+def check_point(message):
+    """Exibe o tempo decorrido com uma mensagem."""
+    elapsed = time.time() - timestart
+    print(f"[{elapsed:.2f}s] {message}")
+
+def criar_csv_vazio():
+    """Cria um arquivo CSV vazio com o cabeçalho."""
+    with ANALISE_CSV.open("w", encoding="utf-8", newline="") as csv_file:
+        writer = csv.writer(csv_file, delimiter=";")
+        writer.writerow(["latitude", "longitude", "diametro"])
+    check_point("Arquivo CSV criado.")
+
+def ler_arquivos_csv():
+    """Lê todos os arquivos CSV do diretório de origem."""
+    return list(ORIGINAL_CSV_DIR.glob("*.csv"))
+
+def processar_arquivo_csv(nome_arquivo):
+    """Processa um arquivo CSV individual e grava os resultados no CSV final."""
+    try:
+        check_point(f"Processando: {nome_arquivo.name}")
+        regiao = RegiaoMarte(nome_arquivo.name)
+        with nome_arquivo.open(newline="") as csv_file:
+            reader = csv.DictReader(csv_file, delimiter=",")
+            for row in reader:
+                latitude = regiao.calcular_latitude(row["lat"])
+                longitude = regiao.calcular_longitude(row["long"])
+                diametro = regiao.calcular_diametro(row["diameter"])
+                linha = [latitude, longitude, diametro]
+                insere_no_csv(linha)
+    except Exception as e:
+        check_point(f"Erro ao processar {nome_arquivo.name}: {e}")
+
+def insere_no_csv(linha):
+    """Insere uma linha de dados no arquivo CSV final."""
+    with ANALISE_CSV.open("a", encoding="utf-8", newline="") as csv_file:
+        writer = csv.writer(csv_file, delimiter=";")
+        writer.writerow(linha)
+
+# Execução principal
+def main():
+    criar_csv_vazio()
+    arquivos_csv = ler_arquivos_csv()
+    for arquivo_csv in arquivos_csv:
+        processar_arquivo_csv(arquivo_csv)
+    check_point("Processamento concluído.")
+
+if __name__ == "__main__":
+    main()
